@@ -1,0 +1,335 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id                       Int       @id @default(autoincrement())
+  email                    String    @unique
+  password                 String
+  name                     String
+  role                     String[]
+  emailVerified            Boolean   @default(false)
+  resetPasswordToken       String?
+  resetPasswordTokenExpiry DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  projects                 Project[]
+  startups                 Startup[]
+
+  grants Grant[]
+
+  IPR IPR[]
+
+  meetings Meeting[]
+  investments Investment[]
+  Collaboration Collaboration[]
+
+
+
+  MeetingRequst MeetingRequst[]
+
+  Investmentoffer Investmentoffer[]
+}
+
+// Enum for User roles
+enum Role {
+  RESEARCHER
+  INNOVATOR
+  ENTREPRENEUR
+  GOVERNMENT
+  INVESTOR
+  IPR_PROFESSIONAL
+}
+
+// Project model
+model Project {
+  id             Int             @id @default(autoincrement())
+  title          String
+  description    String
+  status         Status
+  researcher     User            @relation(fields: [researcherId], references: [id])
+  researcherId   Int
+  startDate      DateTime
+  endDate        DateTime?
+  progress       Float           @default(0)
+  funding        Float           @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  collaborations Collaboration[]
+
+  grants Grant[]
+
+  GrantApplication GrantApplication[]
+}
+
+// Enum for Project Status
+enum Status {
+  ONGOING
+  COMPLETED
+  PENDING
+}
+
+// Collaboration model
+model Collaboration {
+  id        Int      @id @default(autoincrement())
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId Int
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Industry{
+  IT
+  HEALTH
+  FINANCE
+  EDUCATION
+  AGRICULTURE
+  ENERGY
+  MANUFACTURING
+  TRANSPORT
+  RETAIL
+  REAL_ESTATE
+  TOURISM
+  ENTERTAINMENT
+  OTHER
+}
+// Startup model
+model Startup {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String
+  founder     User      @relation(fields: [founderId], references: [id])
+  founderId   Int
+  foundedAt   String
+    
+  teamSize    Int
+  location    String
+  industry    Industry
+  website     String?
+  funding     Float     @default(0)
+  progress    Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  patents     Patent[]
+  metrics     Metrics[]
+  grants     Grant[]
+  grantsApplied GrantApplication[]
+
+  Analytics Analytics[]
+
+  Meeting Meeting[]
+
+  Investment Investment[]
+
+  MeetingRequst MeetingRequst[]
+
+  Investmentoffer Investmentoffer[]
+}
+
+// IPR model
+model IPR {
+  id              Int       @id @default(autoincrement())
+  title           String
+  type            IPRType
+  status          IPRStatus
+  user            User      @relation(fields: [userId], references: [id])
+  userId          Int
+  applicationDate DateTime
+  approvalDate    DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// Enum for IPR Type
+enum IPRType {
+  PATENT
+  TRADEMARK
+  COPYRIGHT
+}
+
+// Enum for IPR Status
+enum IPRStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Patent model (for managing startup patents and storing PDFs)
+model Patent {
+  id              Int       @id @default(autoincrement())
+  title           String
+  startup         Startup   @relation(fields: [startupId], references: [id])
+  startupId       Int
+  description     String
+  patentNumber    String    @unique @default(uuid())
+  pdfPath         String
+  applicationDate DateTime @default(now())
+  approvalDate    DateTime?
+  status          IPRStatus
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// Metrics model (tracks performance and financial data for startups)
+model Metrics {
+  id        Int      @id @default(autoincrement())
+  startup   Startup  @relation(fields: [startupId], references: [id])
+  startupId Int
+  period    DateTime // e.g., 'Q1-2024', 'Jan-2024'
+  retention_rate Float?
+  mrr_growth Float?
+  itv_cac_ratio Float?
+  nps_score Float?
+  conversion_rate Float?
+  revenue   Float?
+  expenses  Float?
+  valuation Float?
+  net_profit    Float?
+  gross_profit    Float?
+  gross_margin Float?
+  founders_equity Int?
+  investors_equity Int?
+  employees_equity Int?
+  customers Int?
+  employees Int?
+  churnRate Float?
+  burnRate  Float?
+  cac       Float?
+  equity    Float?
+  runway    Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Analytics model (stores aggregated or derived insights)
+model Analytics {
+  id        Int           @id @default(autoincrement())
+  startup   Startup?      @relation(fields: [startupId], references: [id])
+  startupId Int?
+  type      AnalyticsType
+  data      Json // Can store complex data like aggregated metrics, graphs, etc.
+  createdAt DateTime      @default(now())
+}
+
+// Enum for Analytics Type
+enum AnalyticsType {
+  PROJECT
+  STARTUP
+  IPR
+  RESOURCE
+  METRIC
+}
+
+// Funding model
+model Grant {
+  id            Int      @id @default(autoincrement())
+  project       Project? @relation(fields: [projectId], references: [id])
+  projectId     Int?
+  startup       Startup? @relation(fields: [startupId], references: [id])
+  startupId     Int?
+  fundingBody   User     @relation(fields: [fundingBodyId], references: [id])  
+  fundingBodyId Int
+  title String
+  description String
+  remark String
+  status IPRStatus
+  requirements String
+  amount        Float
+  deadline  DateTime
+  isAssigned Boolean
+  applications GrantApplication[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model GrantApplication{
+  id Int @id @default(autoincrement())
+  grant Grant @relation(fields: [grantId], references: [id]) 
+  grantId Int
+  startup Startup? @relation(fields: [startupId], references: [id])
+  startupId Int?
+  pitch String
+  project Project? @relation(fields: [projectId], references: [id])
+  projectId Int?
+}
+
+
+model Investment{
+  id Int @id @default(autoincrement())
+  investor User @relation(fields: [investorId], references: [id])
+  investorId Int
+  startup Startup @relation(fields: [startupId], references: [id])
+  startupId Int
+  startupName String
+  amount Float
+  equity Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+}
+
+model Meeting{
+  id Int @id @default(autoincrement())
+  investor User @relation(fields: [investorId], references: [id])
+  investorId Int
+  startup Startup @relation(fields: [startupId], references: [id])
+  startupId Int
+
+  date DateTime
+  duration Int // in minutes
+  link String
+  notes String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+ meetingrequest MeetingRequst @relation(fields: [meetingRequestId], references: [id])
+  meetingRequestId Int @unique
+
+}
+
+model MeetingRequst{
+  // investor would request startup to have a meet 
+
+  id Int @id @default(autoincrement())
+  investor User @relation(fields: [investorId], references: [id])
+  investorId Int
+  
+   startup Startup @relation(fields: [startupId], references: [id])
+  startupId Int
+  meeting Meeting?
+  date DateTime
+  duration Int // in minutes
+  status IPRStatus 
+  
+  remarks String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Investmentoffer{
+  id Int @id @default(autoincrement())
+  investor User @relation(fields: [investorId], references: [id])
+  investorId Int
+  startup Startup @relation(fields: [startupId], references: [id])
+  startupId Int
+  amount Float
+  equity Float
+  remarks String
+  status IPRStatus
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
